@@ -1,23 +1,13 @@
 package com.iwc.test;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class TestClass {
 
 	public static void main(String[] args) {
-
-		try {
-			throw new Exception();
-		} catch (Exception e) {
-			System.out.println("1");
-		}
-
-		try {
-			System.out.println("2");
-		} catch (Exception e) {
-			System.out.println("3");
-		}
-
-		System.out.println("4");
-
+		
+		System.out.println(StringUtils.rightPad("a3333", 10, " "));
+		
 	}
 
 }

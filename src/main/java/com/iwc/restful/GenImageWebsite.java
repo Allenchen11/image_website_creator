@@ -4,15 +4,21 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.sql.rowset.serial.SerialBlob;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +27,10 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.iwc.bean.GenImageWebsiteParamBean;
+import com.iwc.bean.param.DogBean;
+import com.iwc.bean.param.GenImageWebsiteParamBean;
+import com.iwc.bean.vo.WebDownloadRecordVO;
+import com.iwc.dao.WebDownloadRecordDAO;
 import com.iwc.utils.FileUtil;
 import com.iwc.utils.IOUtil;
 import com.iwc.utils.ImageUtil;
@@ -29,15 +38,16 @@ import com.iwc.utils.ZipUtil;
 
 @RestController
 @RequestMapping("GenImageWebsite")
-public class GenImageWebsite {
+public class GenImageWebsite extends BaseRestful{
 
 	private static final Logger logger = LogManager.getLogger(GenImageWebsite.class);
 
-	@Value("${resources.static.path}")
-	private String resourcesStaticPath;
+	@Autowired
+	private WebDownloadRecordDAO webDownloadRecordDAO;
 
+	@Transactional
 	@RequestMapping(value = "/downloadZip", method = RequestMethod.POST)
-	public void getTest(@ModelAttribute GenImageWebsiteParamBean paramBean) {
+	public void downloadZip(@ModelAttribute GenImageWebsiteParamBean paramBean) {
 		RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
 		HttpServletResponse response = ((ServletRequestAttributes) requestAttributes).getResponse();
 
@@ -78,6 +88,32 @@ public class GenImageWebsite {
 			template = template.replace("@@portfolioImg2@@", portfolioImg2FileName);
 			template = template.replace("@@portfolioImg3@@", portfolioImg3FileName);
 
+			WebDownloadRecordVO webDownloadRecordVO = new WebDownloadRecordVO();
+			webDownloadRecordVO.setAboutFooter(paramBean.getAboutFooter());
+			webDownloadRecordVO.setAboutLeft(paramBean.getAboutLeft());
+			webDownloadRecordVO.setAboutRight(paramBean.getAboutRight());
+			webDownloadRecordVO.setCopyright(paramBean.getCopyright());
+			webDownloadRecordVO.setLocation(paramBean.getLocation());
+			webDownloadRecordVO.setMainPic(mainPicFileName);
+			byte[] mainPicByte = null;
+			mainPicByte = ImageUtil.compressUnderSize(mainPic.getBytes(), 65535);
+			if (mainPic.getSize() > 65535) {
+				mainPicByte = ImageUtil.compressUnderSize(mainPic.getBytes(), 65535);
+			}
+			webDownloadRecordVO.setMainPicFile(new SerialBlob(mainPicByte));
+			webDownloadRecordVO.setMainPicColor(paramBean.getMainPicColor());
+			webDownloadRecordVO.setMastheadHeading(paramBean.getMastheadHeading());
+			webDownloadRecordVO.setMastheadSubheading(paramBean.getMastheadSubheading());
+			webDownloadRecordVO.setNavbarBrand(paramBean.getNavbarBrand());
+			webDownloadRecordVO.setPortfolioImg1(portfolioImg1FileName);
+			webDownloadRecordVO.setPortfolioImg1File(new SerialBlob(portfolioImg1.getBytes()));
+			webDownloadRecordVO.setPortfolioImg2(portfolioImg2FileName);
+			webDownloadRecordVO.setPortfolioImg2File(new SerialBlob(portfolioImg2.getBytes()));
+			webDownloadRecordVO.setPortfolioImg3(portfolioImg3FileName);
+			webDownloadRecordVO.setPortfolioImg3File(new SerialBlob(portfolioImg3.getBytes()));
+			webDownloadRecordVO.setTitle(paramBean.getTitle());
+			webDownloadRecordDAO.save(webDownloadRecordVO);
+
 			IOUtil.stringToHtmlFile(destFolderPath + "\\index.html", template);
 
 			mainPicDestFile = new File(destFolderPath + "\\assets\\img\\" + mainPicFileName);
@@ -116,5 +152,31 @@ public class GenImageWebsite {
 			portfolioImg3DestFile.delete();
 		}
 	}
+	
+	
+	@RequestMapping(value = "/queryLatestTenWeb", method = RequestMethod.GET)
+	public Map<String,String> queryLatestTenWeb() {
+		Map<String, String> map = new HashMap<String, String>();
+		
+		List<WebDownloadRecordVO> list =  webDownloadRecordDAO.queryLatestTenWeb();
+		int index = 1;
+		for(WebDownloadRecordVO aWebDownloadRecordVO:list) {
+			map.put(String.valueOf(index), aWebDownloadRecordVO.getTitle());
+			index++;
+		}
+		
+		return map;	
+	}
+	
+	
+	@RequestMapping(value = "/testPost", method = RequestMethod.POST)
+	public Map<String,String> testPost(@RequestBody DogBean dog) {
+		Map map = new HashMap();
+		
+		map.put(dog.getName(),dog.getAge() );
+		
+		return map;	
+	}
+
 
 }

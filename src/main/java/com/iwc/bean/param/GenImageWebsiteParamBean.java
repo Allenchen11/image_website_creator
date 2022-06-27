@@ -1,4 +1,4 @@
-package com.iwc.bean;
+package com.iwc.bean.param;
 
 import org.springframework.web.multipart.MultipartFile;
 
